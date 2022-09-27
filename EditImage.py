@@ -47,7 +47,7 @@ def change_contrast(img, c=-23):
 def change_sharpness(img, sh=16):
     sharp = (100 + sh)/100
 
-    img = ImageEnhance.Contrast(img)
+    img = ImageEnhance.Sharpness(img)
     img = img.enhance(sharp)
     return img
 
