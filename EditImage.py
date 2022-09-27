@@ -3,6 +3,9 @@ import cv2
 from PIL import Image, ImageEnhance
 from CustomFilters import *
 import streamlit as st
+from io import BytesIO, BufferedReader
+import s3fs
+import os
 
 
 
@@ -80,22 +83,41 @@ def edit_image_custom(img, name):
     #img = Image.fromarray(img)
     img = Image.open(img)
 
-    img = change_saturation(img,name['saturation'])
-    img = change_sharpness(img,name['sharpness'])
-    img = change_contrast(img,name['contrast'])
+    img = change_saturation(img,int(name['saturation']))
+    img = change_sharpness(img,int(name['sharpness']))
+    img = change_contrast(img,int(name['contrast']))
 
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-    img = change_brightness(img,name['brightness'])
-    img = change_exposure(img,name['exposure'])
-    img = change_warmth(img,name['warmth'])
-    img = change_tint(img,name['tint'])
+    img = change_brightness(img,int(name['brightness']))
+    img = change_exposure(img,int(name['exposure']))
+    img = change_warmth(img,int(name['warmth']))
+    img = change_tint(img,int(name['tint']))
 
     return img
 
 
+
+
+
 # img = cv2.imread("mcdonalds.jpeg")
 # cv2.imwrite("macdonalds_vintage.jpeg", edit_image_custom(img,VintagePollaroid))
+fs = s3fs.S3FileSystem(anon=False)
+# @st.experimental_memo(ttl=600)
+def read_file(filename):
+    with fs.open(filename) as f:
+        return f.read().decode('latin1')
+
+content = read_file("filterize-bucket/db.txt")
+
+options = []
+# Print results.
+for line in content.strip().split("\n"):
+    # print(line)
+    filter_name = line.split(",")[0]
+    options.append(filter_name)
+    #st.write(filter_name)
+
 
 st.write(""" # Filterize! """
 )
@@ -104,28 +126,45 @@ uploaded_file = st.file_uploader("Choose an image", type=['jpg','jpeg','png'])
 
 option = st.selectbox(
     'Choose Filter',
-    ('VintagePollaroid', 'Retro', 'CoolToned'))
+    (options))
 
 
 if uploaded_file is not None:
-    bytes_data = uploaded_file.read()
+
     # st.write("filename:", uploaded_file.name.split(".")[0])
     # st.write(bytes_data)
     # st.image(uploaded_file)
-    if option == 'VintagePollaroid':
-        filter_chosen = VintagePollaroid
-    elif option == 'Retro':
-        filter_chosen = Retro
-    else:
-        filter_chosen = CoolToned
+    for line in content.strip().split("\n"):
+        print(line)
+        filter_name, sat, exp, br, ct, sh, wm, tn = line.split(",")
+        if filter_name == option:
+            my_filter = {
+                'saturation':sat,
+                'exposure':exp,
+                'brightness':br,
+                'contrast':ct,
+                'sharpness':sh,
+                'warmth':wm,
+                'tint':tn,
+            }
 
-    filtered = edit_image_custom(uploaded_file, filter_chosen)
+
+    filtered = edit_image_custom(uploaded_file, my_filter)
     st.image(filtered, channels='BGR')
+
+    im_rgb = filtered[:, :, [0, 1, 2]] #numpy.ndarray
+    ret, img_enco = cv2.imencode(".jpeg", im_rgb)  #numpy.ndarray
+    srt_enco = img_enco.tostring()  #bytes
+    img_BytesIO = BytesIO(srt_enco) #_io.BytesIO
+    img_BufferedReader = BufferedReader(img_BytesIO) #_io.BufferedReader
+    #img = Image.open(result)
+
+
 
 
     btn = st.download_button(
     label="Download image",
-    data=uploaded_file,
+    data=img_BufferedReader,
     file_name=uploaded_file.name.split(".")[0]+"_"+option+".jpeg",
-    mime="image/png"
+    mime="image/jpeg"
       )
