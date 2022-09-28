@@ -89,5 +89,5 @@ if uploaded_f is not None:
             name = title
         else:
             name = randomname.get_name()
-        write_to_file("filterize-bucket/db.txt", my_filter)
+        write_to_file("filterize-bucket/db_test.txt", my_filter)
         st.success('Your filter is saved!', icon="✅")
