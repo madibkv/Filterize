@@ -108,7 +108,7 @@ def read_file(filename):
     with fs.open(filename) as f:
         return f.read().decode('latin1')
 
-content = read_file("filterize-bucket/db.txt")
+content = read_file("filterize-bucket/db_test.txt")
 
 options = []
 # Print results.
