@@ -48,16 +48,20 @@ if uploaded_f is not None:
     with col2:
         sharp = st.slider("Sharpness", min_value=-100, value=0)
         wrm = st.slider("Warmth", min_value=-100, value=0)
+        shd = st.slider("Shadows", min_value=0, value=0)
 
 
     with col3:
         cont = st.slider("Contrast", min_value=-100, value=0)
         tn = st.slider("Tint", min_value=-100, value=0)
+        hgl = st.slider("Highlights", min_value=0, value=0)
 
     my_filter = {
         'saturation':str(sat),
         'exposure':str(exp),
         'brightness':str(br),
+        'shadows':str(shd),
+        'highlights':str(hgl),
         'contrast':str(cont),
         'sharpness':str(sharp),
         'warmth':str(wrm),
