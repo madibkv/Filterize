@@ -6,6 +6,7 @@ import streamlit as st
 from io import BytesIO, BufferedReader
 import s3fs
 import os
+import math
 
 
 
@@ -30,12 +31,59 @@ def change_brightness(img, val=5):
     # img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
+    # print(v.type)
     v = cv2.add(v, val)
     v[v > 255] = 255
     v[v < 0] = 0
     final_hsv = cv2.merge((h, s, v))
     img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
     return img
+
+def change_shadows(img, shd):
+
+    # img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+
+    shadow = shd / 3
+    v_2 = np.minimum(100, v)
+    v_2[v_2==100] =0
+    v_2 = v_2*shadow*0.02
+
+    v = v - v_2
+
+    v[v > 255] = 255
+    v[v < 0] = 0
+
+    v = v.astype('uint8')
+
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
+
+
+def change_highlights(img, hgl):
+
+    # img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+
+    highlights = hgl / 3
+    v_2 = np.maximum(50,v)
+    v_2[v_2==50] =0
+    v_2 = v_2*highlights*0.02
+
+    v = v + v_2
+
+    v[v > 255] = 255
+    v[v < 0] = 0
+
+    v = v.astype('uint8')
+
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
+
 
 def change_contrast(img, c=-23):
     cont = (100 + (c/2.5))/100
@@ -44,8 +92,9 @@ def change_contrast(img, c=-23):
     img = img.enhance(cont)
     return img
 
+
 def change_sharpness(img, sh=16):
-    sharp = (300 + sh)/100
+    sharp = (100 + (sh*10))/100
 
     img = ImageEnhance.Sharpness(img)
     img = img.enhance(sharp)
@@ -90,6 +139,8 @@ def edit_image_custom(img, name):
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     img = change_brightness(img,int(name['brightness']))
+    img = change_shadows(img, int(name['shadows']))
+    img = change_highlights(img, int(name['highlights']))
     img = change_exposure(img,int(name['exposure']))
     img = change_warmth(img,int(name['warmth']))
     img = change_tint(img,int(name['tint']))
@@ -108,7 +159,7 @@ def read_file(filename):
     with fs.open(filename) as f:
         return f.read().decode('latin1')
 
-content = read_file("filterize-bucket/db_test.txt")
+content = read_file("filterize-bucket/db.txt")
 
 options = []
 # Print results.
@@ -119,8 +170,7 @@ for line in content.strip().split("\n"):
     #st.write(filter_name)
 
 
-st.write(""" # Filterize! """
-)
+st.write(""" # Filterize! """)
 
 uploaded_file = st.file_uploader("Choose an image", type=['jpg','jpeg','png'])
 
@@ -136,12 +186,14 @@ if uploaded_file is not None:
     # st.image(uploaded_file)
     for line in content.strip().split("\n"):
         print(line)
-        filter_name, sat, exp, br, ct, sh, wm, tn = line.split(",")
+        filter_name, sat, exp, br, shd, hgl, ct, sh, wm, tn = line.split(",")
         if filter_name == option:
             my_filter = {
                 'saturation':sat,
                 'exposure':exp,
                 'brightness':br,
+                'shadows':shd,
+                'highlights':hgl,
                 'contrast':ct,
                 'sharpness':sh,
                 'warmth':wm,
